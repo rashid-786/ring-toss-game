@@ -27,6 +27,7 @@ import {
   THROW_GRAB_RADIUS,
 } from '../../config/gameConfig';
 import { PLAYER_COLOR_HEX } from '../../utils/constants';
+import type { PlayerId } from '../../types/game';
 import { bus } from '../../utils/events';
 import { emitMatchStart, emitLanded, emitMatchEnd } from '../../net/commentary';
 import {
@@ -366,10 +367,19 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const next = this.turns.next();
+    const next = this.nextPlayer();
+    this.turns.set(next);
     this.ring.setPlayerColor(PLAYER_COLOR_HEX[next]);
     bus.emit('hud:turn', { playerId: next });
     playTurnSwitch();
+  }
+
+  /** Regulation: Player 1 takes all 5 attempts first, then Player 2. Sudden death alternates. */
+  private nextPlayer(): PlayerId {
+    if (this.state.tieBreaker) {
+      return this.state.attempts[1] <= this.state.attempts[2] ? 1 : 2;
+    }
+    return this.state.attempts[1] < ATTEMPTS_PER_PLAYER ? 1 : 2;
   }
 
   private startTieBreaker(): void {

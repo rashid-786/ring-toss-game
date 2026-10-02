@@ -14,4 +14,4 @@ export const PLAYER_CSS_COLORS: Record<PlayerId, string> = {
 };
 
 export const INSTRUCTIONS_TEXT =
-  'Throw the ring onto the moving pole to score points.\nEach player gets 5 attempts; highest score wins.';
+  'Throw the ring onto the moving pole to score points.\nPlayer 1 throws all 5 attempts, then Player 2. Highest score wins.';

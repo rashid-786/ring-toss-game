@@ -1,6 +1,6 @@
 import type { PlayerId } from '../../types/game';
 
-/** Tracks which player throws and alternates turns. Pure state, no Phaser deps. */
+/** Tracks which player throws. Pure state, no Phaser deps. */
 export class TurnManager {
   private current: PlayerId = 1;
 
@@ -8,12 +8,11 @@ export class TurnManager {
     this.current = 1;
   }
 
-  currentPlayer(): PlayerId {
-    return this.current;
+  set(playerId: PlayerId): void {
+    this.current = playerId;
   }
 
-  next(): PlayerId {
-    this.current = this.current === 1 ? 2 : 1;
+  currentPlayer(): PlayerId {
     return this.current;
   }
 }

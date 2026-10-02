@@ -3,11 +3,12 @@ import { useGame, createRoom, joinRoom, startMatch } from '../net/gameStore';
 import { PLAYER_1_NAME, PLAYER_2_NAME, PLAYER_CSS_COLORS } from '../utils/constants';
 
 interface Props {
+  initialName?: string;
   onStart: () => void;
   onBack: () => void;
 }
 
-export default function LobbyScreen({ onStart, onBack }: Props) {
+export default function LobbyScreen({ initialName = '', onStart, onBack }: Props) {
   const room = useGame((s) => s.room);
   const myPlayerId = useGame((s) => s.myPlayerId);
   const isHost = useGame((s) => s.isHost);
@@ -16,7 +17,7 @@ export default function LobbyScreen({ onStart, onBack }: Props) {
   const connected = useGame((s) => s.connected);
 
   const [mode, setMode] = useState<'create' | 'join' | null>(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [code, setCode] = useState('');
 
   useEffect(() => {

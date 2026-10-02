@@ -23,6 +23,7 @@ export default function App() {
   const [result, setResult] = useState<MatchResult | null>(null);
   const [matchId, setMatchId] = useState(0);
   const [names, setNames] = useState<PlayerNames>({ player1Name: 'Player 1', player2Name: 'Player 2' });
+  const [onlineName, setOnlineName] = useState('');
 
   const phase = useGame((s) => s.phase);
 
@@ -33,7 +34,8 @@ export default function App() {
     setScreen('game');
   };
 
-  const goOnline = () => {
+  const goOnline = (name: string) => {
+    setOnlineName(name.trim() || 'Player 1');
     setMode('online');
     connectGame();
     setScreen('lobby');
@@ -81,7 +83,11 @@ export default function App() {
       )}
 
       {screen === 'lobby' && mode === 'online' && (
-        <LobbyScreen onStart={handleOnlineStart} onBack={goMenu} />
+        <LobbyScreen
+          initialName={onlineName}
+          onStart={handleOnlineStart}
+          onBack={goMenu}
+        />
       )}
 
       {screen === 'game' && mode === 'local' && (

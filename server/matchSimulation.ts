@@ -315,7 +315,12 @@ export class MatchSimulation {
   }
 
   private nextThrower(): PlayerId {
-    return this.attempts[1] <= this.attempts[2] ? 1 : 2;
+    if (this.tieBreaker) {
+      // Sudden death: alternate champion -> challenger each round.
+      return this.attempts[1] <= this.attempts[2] ? 1 : 2;
+    }
+    // Regulation: Player 1 takes all attempts first, then Player 2.
+    return this.attempts[1] < this.attemptsPerPlayer ? 1 : 2;
   }
 
   private startTieBreaker(): void {

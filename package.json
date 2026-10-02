@@ -1,0 +1,43 @@
+{
+  "name": "ring-toss-duel",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:all": "concurrently -k -n web,srv \"npm:dev\" \"npm:dev:server\"",
+    "build": "vite build",
+    "typecheck": "tsc -b && tsc -p server/tsconfig.json",
+    "test": "vitest run",
+    "start": "tsx server/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "phaser": "^3.80.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "tsx": "^4.19.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.1",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.1"
+  },
+  "overrides": {
+    "baseline-browser-mapping": "2.11.26"
+  }
+}

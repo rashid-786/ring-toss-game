@@ -13,6 +13,7 @@ export interface CommentaryRequest {
   player1: CommentaryPlayer;
   player2: CommentaryPlayer;
   leaderName?: string;
+  scorerName?: string;
   timeRemaining?: number;
   pointsScored?: number;
   winner?: string;

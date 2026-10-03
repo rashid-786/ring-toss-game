@@ -220,7 +220,7 @@ export class FallbackCommentaryProvider {
     const template = this.fallbacks[request.eventType];
     const pick = template.messages[Math.floor(Math.random() * template.messages.length)];
     const winnerName = request.winner ?? request.leaderName ?? '';
-    const playerName = this.activePlayerName(request);
+    const playerName = request.scorerName ?? this.activePlayerName(request);
 
     return {
       eventType: request.eventType,

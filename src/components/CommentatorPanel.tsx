@@ -52,6 +52,35 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   const [current, setCurrent] = useState<CommentaryUpdate | null>(null);
   const [ttsOn, setTtsOn] = useState(true);
   const spokenFor = useRef<string | null>(null);
+  const speakTimer = useRef<number | null>(null);
+
+  const voiceLang = (value: string): string => {
+    const lang = value.toLowerCase();
+    if (lang.includes('hind')) return 'hi-IN';
+    if (lang.includes('arab')) return 'ar-SA';
+    return 'en-US';
+  };
+
+  const speak = (message: string, isWinner: boolean): void => {
+    const synth = window.speechSynthesis;
+    // Cancel any stuck/busy speech so the next message always plays.
+    synth.cancel();
+    // Chrome drops utterances started immediately after cancel(); delay briefly.
+    if (speakTimer.current !== null) window.clearTimeout(speakTimer.current);
+    speakTimer.current = window.setTimeout(() => {
+      const speakable = message
+        .replace(/!{2,}/g, '!')
+        .replace(/!/g, '.')
+        .replace(/\.{3,}/g, '.')
+        .trim();
+      const utterance = new SpeechSynthesisUtterance(speakable);
+      utterance.lang = voiceLang(language);
+      utterance.volume = isWinner ? 1 : 0.9;
+      utterance.rate = isWinner ? 0.95 : 1;
+      utterance.pitch = isWinner ? 1.15 : 1;
+      synth.speak(utterance);
+    }, 120);
+  };
 
   useEffect(() => {
     if (commentary.length === 0) return;
@@ -80,30 +109,27 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   useEffect(() => {
     if (!ttsOn || !current || spokenFor.current === current.message) return;
     spokenFor.current = current.message;
-    try {
-      // Clean punctuation so voices don't read "!" as "exclamation point".
-      const speakable = current.message
-        .replace(/!{2,}/g, '!')
-        .replace(/!/g, '.')
-        .replace(/\.{3,}/g, '.')
-        .trim();
-      const synth = window.speechSynthesis;
-      // Cancel any stuck/busy speech so the next message always plays.
-      synth.cancel();
-      const utterance = new SpeechSynthesisUtterance(speakable);
-      const lang = language.toLowerCase();
-      if (lang.includes('hind')) utterance.lang = 'hi-IN';
-      else if (lang.includes('arab')) utterance.lang = 'ar-SA';
-      else utterance.lang = 'en-US';
-      synth.speak(utterance);
-    } catch {
-      // speech synthesis unavailable — commentary stays visible as text
-    }
+    speak(current.message, current.type === 'MATCH_END');
   }, [current, ttsOn, language]);
+
+  // Chrome pauses speech synthesis after a while / when the tab is backgrounded;
+  // periodically nudge it back to life so commentary keeps speaking.
+  useEffect(() => {
+    if (!ttsOn) return;
+    const id = window.setInterval(() => {
+      const synth = window.speechSynthesis;
+      if (synth.paused) synth.resume();
+    }, 8000);
+    return () => {
+      window.clearInterval(id);
+      if (speakTimer.current !== null) window.clearTimeout(speakTimer.current);
+    };
+  }, [ttsOn]);
 
   if (!enabled) return null;
 
   const toneClass = current ? TONE_CLASS[current.tone] ?? '' : '';
+  const isWinnerMsg = current?.type === 'MATCH_END';
   const idleText = connected
     ? 'Waiting for the action...'
     : 'Commentary offline — is the server running? (npm run dev:server)';
@@ -111,8 +137,11 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   return (
     <div className="commentator-panel" role="status" aria-live="polite">
       <div className="commentator-icon" aria-hidden="true">🎙️</div>
-      <div className={`commentator-bubble ${toneClass} ${current ? 'enter' : ''} ${!connected ? 'offline' : ''}`}>
+      <div
+        className={`commentator-bubble ${toneClass} ${current ? 'enter' : ''} ${!connected ? 'offline' : ''} ${isWinnerMsg ? 'winner' : ''}`}
+      >
         {connected && <span className="live-badge">LIVE</span>}
+        {isWinnerMsg && <span className="winner-badge">🏆 WINNER</span>}
         {current ? current.message : idleText}
       </div>
       <button

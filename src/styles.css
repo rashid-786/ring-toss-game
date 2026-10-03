@@ -590,6 +590,37 @@ body {
   color: #ffd0c4;
 }
 
+.commentator-bubble.winner {
+  border-color: #ffd54f;
+  background: rgba(40, 26, 0, 0.92);
+  box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.35), 0 10px 28px rgba(0, 0, 0, 0.5);
+  animation: winner-glow 1.1s ease-in-out infinite alternate;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.winner-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #ffd54f;
+  color: #241a00;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  vertical-align: middle;
+}
+
+@keyframes winner-glow {
+  from {
+    box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.35), 0 10px 28px rgba(0, 0, 0, 0.5);
+  }
+  to {
+    box-shadow: 0 0 0 6px rgba(255, 213, 79, 0.6), 0 10px 34px rgba(255, 213, 79, 0.25);
+  }
+}
+
 .tts-toggle {
   pointer-events: auto;
   width: 40px;

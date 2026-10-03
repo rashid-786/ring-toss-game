@@ -106,6 +106,7 @@ export class CommentaryManager {
         this.buildRequest(detection.eventType, input.players, {
           timeRemainingMs: input.timeRemainingMs,
           pointsScored: input.points,
+          scorerName: this.displayName(input.players, input.playerId),
         }),
       );
     }
@@ -186,6 +187,7 @@ export class CommentaryManager {
     extra: {
       timeRemainingMs?: number;
       pointsScored?: number;
+      scorerName?: string;
       winner?: string;
       isDraw?: boolean;
       leadChanges?: number;
@@ -207,6 +209,7 @@ export class CommentaryManager {
         score: scores[2],
       },
       leaderName: this.leaderName(players),
+      scorerName: extra.scorerName,
       timeRemaining: extra.timeRemainingMs !== undefined
         ? Math.max(0, Math.ceil(extra.timeRemainingMs / 1000))
         : undefined,

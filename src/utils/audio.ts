@@ -22,6 +22,16 @@ export function initAudio(): void {
   getContext();
 }
 
+/** Primes speech synthesis so commentary TTS works after a user gesture. */
+export function primeSpeech(): void {
+  try {
+    window.speechSynthesis?.getVoices();
+    window.speechSynthesis?.resume();
+  } catch {
+    // speech synthesis unavailable
+  }
+}
+
 function tone(
   freq: number,
   duration: number,

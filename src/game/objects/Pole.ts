@@ -31,9 +31,10 @@ export class Pole {
     groundTop: number,
     config: PoleConfig,
     patrolAmplitude: number,
+    speedOverride?: number,
   ) {
     this.config = config;
-    this.speed = Math.abs(config.speed);
+    this.speed = Math.abs(speedOverride ?? config.speed);
     this.dir = this.speed === 0 ? 1 : 1;
 
     const zoneY = groundTop - config.height - ZONE_HEIGHT / 2;

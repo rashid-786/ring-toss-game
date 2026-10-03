@@ -8,10 +8,11 @@ interface CommentaryState {
   items: CommentaryUpdate[];
   enabled: boolean;
   connected: boolean;
+  language: string;
   recap: CommentaryUpdate | null;
 }
 
-let state: CommentaryState = { items: [], enabled: true, connected: false, recap: null };
+let state: CommentaryState = { items: [], enabled: true, connected: false, language: 'English', recap: null };
 
 let playerNames = { player1: 'Player 1', player2: 'Player 2' };
 
@@ -37,7 +38,7 @@ socket.on('disconnect', () => patch({ connected: false }));
 socket.on('connect_error', () => patch({ connected: false }));
 
 socket.on(CommentarySocketEvents.status, (status: CommentaryStatus) => {
-  patch({ enabled: status.enabled });
+  patch({ enabled: status.enabled, language: status.language ?? 'English' });
 });
 
 socket.on(CommentarySocketEvents.recap, (update: CommentaryUpdate) => {

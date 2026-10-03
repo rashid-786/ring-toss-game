@@ -30,6 +30,7 @@ export type SimEvent =
 export interface SimOptions {
   attemptsPerPlayer?: number;
   tieBreakerAttempts?: number;
+  poleSpeed?: number;
 }
 
 interface RingSim {
@@ -102,8 +103,11 @@ export class MatchSimulation {
   constructor(private emit: (event: SimEvent) => void, options: SimOptions = {}) {
     this.attemptsPerPlayer = options.attemptsPerPlayer ?? 5;
     this.tieBreakerAttempts = options.tieBreakerAttempts ?? 1;
+    this.poleSpeed = options.poleSpeed;
     this.initPoles();
   }
+
+  private poleSpeed: number | undefined;
 
   private initPoles(): void {
     this.patrol = [];
@@ -112,7 +116,7 @@ export class MatchSimulation {
       const half = cfg.landingZoneWidth / 2;
       this.patrol.push({
         dir: 1,
-        speed: Math.abs(cfg.speed),
+        speed: Math.abs(this.poleSpeed ?? cfg.speed),
         minX: Math.max(half, x - POLE_PATROL),
         maxX: Math.min(GAME_WIDTH - half, x + POLE_PATROL),
       });
@@ -231,23 +235,23 @@ export class MatchSimulation {
 
   private integrateRing(dtMs: number): void {
     const s = dtMs / 1000;
-    const prevY = this.ring.y;
 
     this.ring.vy += GRAVITY_Y * s;
     this.ring.x += this.ring.vx * s;
     this.ring.y += this.ring.vy * s;
     this.ring.rotation += (this.ring.vx / 320) * s;
 
+    // Landing mimics the local game: the ring's body touches the pole's
+    // landing-zone rectangle while falling.
     if (this.ring.vy > LANDING_MIN_VY) {
       for (let i = 0; i < this.poles.length; i += 1) {
         const pole = this.poles[i];
         const type = POLE_PLACEMENT[pole.index].type;
         const cfg = POLE_CONFIGS[type];
         const zoneY = this.groundTop - cfg.height - ZONE_HEIGHT / 2;
-        const bandTop = zoneY - ZONE_HEIGHT / 2;
-        const bandBottom = zoneY + ZONE_HEIGHT / 2;
-        const xOk = Math.abs(this.ring.x - pole.x) <= cfg.landingZoneWidth / 2;
-        if (xOk && prevY <= bandBottom && this.ring.y >= bandTop) {
+        const withinX = Math.abs(this.ring.x - pole.x) <= cfg.landingZoneWidth / 2 + RING_RADIUS;
+        const withinY = Math.abs(this.ring.y - zoneY) <= ZONE_HEIGHT / 2 + RING_RADIUS;
+        if (withinX && withinY) {
           this.handleLanding(type, cfg.points);
           return;
         }
@@ -278,15 +282,15 @@ export class MatchSimulation {
     this.scores[thrower] += points;
     this.emit({ type: 'landed', playerId: thrower, points, poleType: type });
     this.ring.active = false;
-    this.advanceAfterThrow(points);
+    this.advanceAfterThrow();
   }
 
   private endThrow(): void {
     this.ring.active = false;
-    this.advanceAfterThrow(0);
+    this.advanceAfterThrow();
   }
 
-  private advanceAfterThrow(throwPoints: number): void {
+  private advanceAfterThrow(): void {
     const thrower = this.turn;
     this.attempts[thrower] += 1;
 
@@ -301,12 +305,12 @@ export class MatchSimulation {
         }
         return;
       }
-    } else if (throwPoints > 0) {
-      // Sudden death: the first player to score wins immediately.
-      this.finishMatch();
-      return;
     } else if (this.attempts[1] === this.attempts[2]) {
-      // Both threw this round without scoring -> next sudden-death round.
+      // Both threw this sudden-death round -> compare total scores.
+      if (this.scores[1] !== this.scores[2]) {
+        this.finishMatch();
+        return;
+      }
       this.tieBreakerRound += 1;
       this.emit({ type: 'tie-breaker-start', round: this.tieBreakerRound });
     }

@@ -47,6 +47,10 @@ export function detectLandedEvent(input: LandedDetectionInput): DetectionResult 
     eventType = 'LEAD_CHANGE';
   } else if (leader === null && newScores[1] > 0 && newScores[2] > 0) {
     eventType = 'TIE_SCORE';
+  } else {
+    // Every landing gets at least a generic scoring comment, so both players
+    // always hear the commentator (e.g. while trailing).
+    eventType = 'SCORE';
   }
 
   return { eventType, leader, leadChanged };

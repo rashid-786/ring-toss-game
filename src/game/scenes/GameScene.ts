@@ -89,8 +89,9 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.existing(this.ground, true);
 
     // Poles.
+    const poleSpeed = Number(import.meta.env.VITE_POLE_SPEED) || undefined;
     this.poles = POLE_PLACEMENT.map(({ type, x }) => (
-      new Pole(this, x, this.groundTop, POLE_CONFIGS[type], POLE_PATROL)
+      new Pole(this, x, this.groundTop, POLE_CONFIGS[type], POLE_PATROL, poleSpeed)
     ));
 
     // Ring.
@@ -319,16 +320,16 @@ export class GameScene extends Phaser.Scene {
     this.spawnFloatingText(pole.zone.x, pole.zone.y - 30, `+${points}`);
     this.spawnLandedRing(pole.zone.x, pole.zone.y, player);
 
-    this.finishThrow(points);
+    this.finishThrow();
   }
 
-  private finishThrow(throwPoints = 0): void {
+  private finishThrow(): void {
     this.ringLaunched = false;
     this.stillFrames = 0;
     this.ring.resetHome();
 
     if (this.state.phase === 'playing') {
-      this.handleAttemptProgress(throwPoints);
+      this.handleAttemptProgress();
     }
   }
 
@@ -337,7 +338,7 @@ export class GameScene extends Phaser.Scene {
    * thrower or ends the match / starts a tie-breaker once both players have
    * completed their regulation attempts.
    */
-  private handleAttemptProgress(throwPoints: number): void {
+  private handleAttemptProgress(): void {
     const thrower = this.turns.currentPlayer();
     this.state.attempts[thrower] += 1;
     this.emitAttempts();
@@ -351,14 +352,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.state.tieBreaker && throwPoints > 0) {
-      // Sudden death: the first player to score wins immediately.
-      this.endMatch();
-      return;
-    }
-
     if (this.state.tieBreaker && this.state.attempts[1] === this.state.attempts[2]) {
-      // Both threw this round without scoring -> next sudden-death round.
+      // Both threw this sudden-death round -> compare total scores.
+      if (this.state.scores[1] !== this.state.scores[2]) {
+        this.endMatch();
+        return;
+      }
       this.state.tieBreakerRound += 1;
       this.turns.reset();
       bus.emit('hud:turn', { playerId: 1 });

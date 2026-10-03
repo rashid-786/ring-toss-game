@@ -30,10 +30,10 @@ export function createTextures(scene: Phaser.Scene): void {
   g.generateTexture('pole', 32, 64);
   g.clear();
 
-  // Ring (donut, white, tinted per player).
-  g.lineStyle(7, 0xffffff, 1);
-  g.strokeCircle(16, 16, 11);
-  g.generateTexture('ring', 32, 32);
+  // Ring (donut, white, tinted per player). Hole fits around the pole.
+  g.lineStyle(8, 0xffffff, 1);
+  g.strokeCircle(20, 20, 15);
+  g.generateTexture('ring', 40, 40);
 
   g.destroy();
 }

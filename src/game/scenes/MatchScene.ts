@@ -78,6 +78,8 @@ export class MatchScene extends Phaser.Scene {
 
   private lastTurn: number | null = null;
 
+  private homePulse: Phaser.Tweens.Tween | null = null;
+
   private groundTop = GAME_HEIGHT - GROUND_HEIGHT;
 
   constructor(sceneKey: string, private source: MatchRenderSource) {
@@ -172,7 +174,23 @@ export class MatchScene extends Phaser.Scene {
       this.ringSprite.setPosition(RING_HOME_X, RING_HOME_Y);
       this.ringSprite.setRotation(0);
       this.ringSprite.setTint(PLAYER_COLOR_HEX[myColor]);
+      // Pulse so it's obvious the ring is grabbable on your turn.
+      if (!this.homePulse) {
+        this.ringSprite.setScale(1);
+        this.homePulse = this.tweens.add({
+          targets: this.ringSprite,
+          scale: 1.2,
+          duration: 500,
+          yoyo: true,
+          repeat: -1,
+        });
+      }
     } else {
+      if (this.homePulse) {
+        this.homePulse.stop();
+        this.homePulse = null;
+        this.ringSprite.setScale(1);
+      }
       this.ringSprite.setVisible(false);
     }
   }

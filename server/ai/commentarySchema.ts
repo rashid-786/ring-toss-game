@@ -46,6 +46,7 @@ export const envSchema = z.object({
   AI_BASE_URL: z.preprocess(clean, z.string().url().optional()),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
   COMMENTARY_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(1500),
+  COMMENTARY_LANGUAGE: z.string().trim().default('English'),
   COMMENTARY_ENABLED: z.preprocess(clean, z.enum(['true', 'false'])).default('true'),
 });
 

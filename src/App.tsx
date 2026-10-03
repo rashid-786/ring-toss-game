@@ -26,6 +26,15 @@ export default function App() {
   const [onlineName, setOnlineName] = useState('');
 
   const phase = useGame((s) => s.phase);
+  const room = useGame((s) => s.room);
+
+  // Online uses the actual room player names; local uses the entered names.
+  const resultPlayer1Name = mode === 'online'
+    ? room?.players.find((p) => p.playerId === 1)?.name ?? names.player1Name
+    : names.player1Name;
+  const resultPlayer2Name = mode === 'online'
+    ? room?.players.find((p) => p.playerId === 2)?.name ?? names.player2Name
+    : names.player2Name;
 
   const goLocal = (entered: PlayerNames) => {
     setNames(entered);
@@ -110,8 +119,8 @@ export default function App() {
       {screen === 'results' && result && (
         <ResultsScreen
           result={result}
-          player1Name={names.player1Name}
-          player2Name={names.player2Name}
+          player1Name={resultPlayer1Name}
+          player2Name={resultPlayer2Name}
           onPlayAgain={playAgain}
           onMenu={goMenu}
         />

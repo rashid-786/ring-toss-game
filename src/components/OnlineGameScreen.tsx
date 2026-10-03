@@ -6,7 +6,7 @@ import {
 } from '../net/gameStore';
 import CommentatorPanel from './CommentatorPanel';
 import type { MatchResult, PlayerId } from '../types/game';
-import { PLAYER_1_NAME, PLAYER_2_NAME, PLAYER_CSS_COLORS } from '../utils/constants';
+import { PLAYER_CSS_COLORS } from '../utils/constants';
 
 interface Props {
   onComplete: (result: MatchResult) => void;
@@ -25,6 +25,10 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
   const goFlash = useGame((s) => s.goFlash);
   const myPlayerId = useGame((s) => s.myPlayerId);
   const connected = useGame((s) => s.connected);
+  const room = useGame((s) => s.room);
+
+  const player1Name = room?.players.find((p) => p.playerId === 1)?.name ?? 'Player 1';
+  const player2Name = room?.players.find((p) => p.playerId === 2)?.name ?? 'Player 2';
 
   const [showGo, setShowGo] = useState(false);
   const [showAbort, setShowAbort] = useState(false);
@@ -73,7 +77,7 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
     <div className="screen game-screen">
       <div className="hud">
         <div className="score-box" style={{ borderColor: PLAYER_CSS_COLORS[1] }}>
-          <span className="name" style={{ color: PLAYER_CSS_COLORS[1] }}>{PLAYER_1_NAME}</span>
+          <span className="name" style={{ color: PLAYER_CSS_COLORS[1] }}>{player1Name}</span>
           <span className="score">{scores[1]}</span>
           <span className="attempts">
             {tieBreaker ? 'Sudden death' : `Attempt ${Math.min(attempts[1] + 1, 5)} / 5`}
@@ -82,7 +86,7 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
 
         <div className="hud-center">
           <div className="turn-badge" style={{ background: currentPlayerColor }}>
-            {turn === 1 ? PLAYER_1_NAME : PLAYER_2_NAME} Turn
+            {turn === 1 ? player1Name : player2Name} Turn
           </div>
           {tieBreaker && (
             <div className="tiebreaker-badge">Sudden Death • Round {tieBreakerRound}</div>
@@ -90,7 +94,7 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
         </div>
 
         <div className="score-box" style={{ borderColor: PLAYER_CSS_COLORS[2] }}>
-          <span className="name" style={{ color: PLAYER_CSS_COLORS[2] }}>{PLAYER_2_NAME}</span>
+          <span className="name" style={{ color: PLAYER_CSS_COLORS[2] }}>{player2Name}</span>
           <span className="score">{scores[2]}</span>
           <span className="attempts">
             {tieBreaker ? 'Sudden death' : `Attempt ${Math.min(attempts[2] + 1, 5)} / 5`}
@@ -104,8 +108,8 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
 
       <div className="hint">
         {snapshot?.turn === myPlayerId
-          ? 'Your turn — drag the ring backward and release to throw'
-          : 'Opponent is throwing — watch and wait'}
+          ? 'Your turn drag the ring backward and release to throw'
+          : 'Opponent is throwing watch and wait'}
       </div>
 
       {!connected && <div className="overlay-panel">Disconnected... reconnecting</div>}

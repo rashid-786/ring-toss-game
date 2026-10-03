@@ -20,7 +20,7 @@ export const ATTEMPTS_PER_PLAYER = 5;
 export const TIE_BREAKER_ATTEMPTS = 1;
 
 // Ring.
-export const RING_RADIUS = 13;
+export const RING_RADIUS = 17;
 export const RING_HOME_X = 170;
 export const RING_HOME_Y = GAME_HEIGHT - GROUND_HEIGHT - RING_RADIUS - 4;
 
@@ -53,7 +53,7 @@ export const POLE_CONFIGS: Record<PoleType, PoleConfig> = {
     points: 3,
     width: 22,
     height: 110,
-    speed: 0,
+    speed: 25,
     landingZoneWidth: 200,
     color: 0x90a4ae,
     label: '3',

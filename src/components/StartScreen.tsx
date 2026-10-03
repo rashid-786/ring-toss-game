@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { INSTRUCTIONS_TEXT } from '../utils/constants';
-import { initAudio } from '../utils/audio';
+import { initAudio, primeSpeech } from '../utils/audio';
 import { PLAYER_CSS_COLORS } from '../utils/constants';
 
 export interface PlayerNames {
@@ -23,24 +23,29 @@ export default function StartScreen({ onLocal, onOnline }: Props) {
 
   const name1 = player1Name.trim() || 'Player 1';
   const name2 = player2Name.trim() || 'Player 2';
+  // Online uses the name you typed (either field works — each player is on
+  // their own device, so they enter their own name).
+  const onlineName = player1Name.trim() || player2Name.trim() || 'Player 1';
 
   const start = () => {
     initAudio();
+    primeSpeech();
     onLocal({ player1Name: name1, player2Name: name2 });
   };
 
   return (
     <div className="screen start-screen">
       <div className="start-panel">
-        <h1 className="title">Ring Toss Duel</h1>
-        <p className="subtitle">Play online with a friend — each on your own laptop.</p>
+        <h1 className="title">Lets Begin !!</h1>
+        <p className="subtitle">E-Com Online Ring Toss Tournament</p>
 
         <button
           type="button"
           className="btn btn-primary btn-large"
           onClick={() => {
             initAudio();
-            onOnline(name1);
+            primeSpeech();
+            onOnline(onlineName);
           }}
         >
           ▶ Play Online

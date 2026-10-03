@@ -82,7 +82,7 @@ export function startServer(options: StartOptions = {}) {
   const port = options.port ?? (Number.isFinite(envPort) ? envPort : 3001);
 
   const env = getEnv();
-  const fallback = new FallbackCommentaryProvider();
+  const fallback = new FallbackCommentaryProvider(env.COMMENTARY_LANGUAGE);
   const service = env.AI_PROVIDER !== 'none' && env.AI_API_KEY
     ? new HttpAICommentaryService({
       provider: env.AI_PROVIDER,
@@ -90,6 +90,7 @@ export function startServer(options: StartOptions = {}) {
       model: env.AI_MODEL,
       baseUrl: env.AI_BASE_URL,
       timeoutMs: env.AI_REQUEST_TIMEOUT_MS,
+      language: env.COMMENTARY_LANGUAGE,
     })
     : new FallbackAICommentaryService(fallback);
 
@@ -124,7 +125,7 @@ export function startServer(options: StartOptions = {}) {
         io.to(room.code).emit(event, update);
       },
     });
-    io.to(room.code).emit(ServerEvents.commentaryStatus, { enabled: service.enabled });
+    io.to(room.code).emit(ServerEvents.commentaryStatus, { enabled: service.enabled, language: env.COMMENTARY_LANGUAGE });
   }
 
   function feedCommentary(room: Room, event: SimEvent): void {
@@ -335,6 +336,7 @@ export function startServer(options: StartOptions = {}) {
           {
             attemptsPerPlayer: Number(process.env.ATTEMPTS_PER_PLAYER) || ATTEMPTS_PER_PLAYER,
             tieBreakerAttempts: Number(process.env.TIE_BREAKER_ATTEMPTS) || TIE_BREAKER_ATTEMPTS,
+            poleSpeed: Number(process.env.POLE_SPEED) || undefined,
           },
         );
       }
@@ -369,7 +371,7 @@ export function startServer(options: StartOptions = {}) {
   });
 
   // Local-game commentary bridge (same-origin, per connection).
-  registerCommentarySocketHandlers(io, service, fallback, env.COMMENTARY_MIN_INTERVAL_MS);
+  registerCommentarySocketHandlers(io, service, fallback, env.COMMENTARY_MIN_INTERVAL_MS, env.COMMENTARY_LANGUAGE);
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {

@@ -36,18 +36,21 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   const localInbox = useCommentary((s) => s.items);
   const localEnabled = useCommentary((s) => s.enabled);
   const localConnected = useCommentary((s) => s.connected);
+  const localLanguage = useCommentary((s) => s.language);
   const onlineInbox = useGame((s) => s.commentary);
   const onlineEnabled = useGame((s) => s.commentaryEnabled);
   const onlineConnected = useGame((s) => s.connected);
+  const onlineLanguage = useGame((s) => s.commentaryLanguage);
 
   const commentary = isOnline ? onlineInbox : localInbox;
   const enabled = isOnline ? onlineEnabled : localEnabled;
   const connected = isOnline ? onlineConnected : localConnected;
+  const language = isOnline ? onlineLanguage : localLanguage;
   const consume = isOnline ? consumeOnlineCommentary : consumeBridgeCommentary;
 
   const [queue, setQueue] = useState<CommentaryUpdate[]>([]);
   const [current, setCurrent] = useState<CommentaryUpdate | null>(null);
-  const [ttsOn, setTtsOn] = useState(false);
+  const [ttsOn, setTtsOn] = useState(true);
   const spokenFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -58,25 +61,45 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
     }
   }, [commentary]);
 
+  // Show the next queued message whenever nothing is currently displayed.
   useEffect(() => {
     if (current || queue.length === 0) return;
     const [next, ...rest] = queue;
     setCurrent(next);
     setQueue(rest);
+  }, [current, queue]);
+
+  // Auto-hide the current message after ~4s (separate effect so its timer is
+  // not cleared by the advance effect's re-render).
+  useEffect(() => {
+    if (!current) return;
     const timer = window.setTimeout(() => setCurrent(null), MESSAGE_MS);
     return () => window.clearTimeout(timer);
-  }, [current, queue]);
+  }, [current]);
 
   useEffect(() => {
     if (!ttsOn || !current || spokenFor.current === current.message) return;
     spokenFor.current = current.message;
     try {
-      const utterance = new SpeechSynthesisUtterance(current.message);
-      window.speechSynthesis.speak(utterance);
+      // Clean punctuation so voices don't read "!" as "exclamation point".
+      const speakable = current.message
+        .replace(/!{2,}/g, '!')
+        .replace(/!/g, '.')
+        .replace(/\.{3,}/g, '.')
+        .trim();
+      const synth = window.speechSynthesis;
+      // Cancel any stuck/busy speech so the next message always plays.
+      synth.cancel();
+      const utterance = new SpeechSynthesisUtterance(speakable);
+      const lang = language.toLowerCase();
+      if (lang.includes('hind')) utterance.lang = 'hi-IN';
+      else if (lang.includes('arab')) utterance.lang = 'ar-SA';
+      else utterance.lang = 'en-US';
+      synth.speak(utterance);
     } catch {
       // speech synthesis unavailable — commentary stays visible as text
     }
-  }, [current, ttsOn]);
+  }, [current, ttsOn, language]);
 
   if (!enabled) return null;
 
@@ -89,6 +112,7 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
     <div className="commentator-panel" role="status" aria-live="polite">
       <div className="commentator-icon" aria-hidden="true">🎙️</div>
       <div className={`commentator-bubble ${toneClass} ${current ? 'enter' : ''} ${!connected ? 'offline' : ''}`}>
+        {connected && <span className="live-badge">LIVE</span>}
         {current ? current.message : idleText}
       </div>
       <button

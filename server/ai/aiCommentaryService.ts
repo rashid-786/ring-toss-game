@@ -22,6 +22,7 @@ export interface AIServiceOptions {
   model?: string;
   baseUrl?: string;
   timeoutMs: number;
+  language?: string;
 }
 
 export interface AICommentaryService {
@@ -77,8 +78,8 @@ export class HttpAICommentaryService implements AICommentaryService {
   }
 
   private buildHttpRequest(request: CommentaryRequest): { url: string; init: RequestInit } {
-    const { provider, apiKey, model, baseUrl } = this.options;
-    const messages = buildMessages(request);
+    const { provider, apiKey, model, baseUrl, language } = this.options;
+    const messages = buildMessages(request, language ?? 'English');
     const user = `${messages.user}${OUTPUT_FORMAT_INSTRUCTION}`;
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };

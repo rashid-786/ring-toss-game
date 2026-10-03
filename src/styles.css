@@ -113,6 +113,10 @@ body {
   background: var(--border);
 }
 
+.online-name-hint {
+  font-size: 0.85rem;
+}
+
 .btn-secondary {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid var(--border);
@@ -394,6 +398,23 @@ body {
   letter-spacing: 2px;
 }
 
+.copy-code-btn {
+  margin-top: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.copy-code-btn:hover {
+  background: rgba(47, 123, 255, 0.4);
+  border-color: #2f7bff;
+}
+
 .lobby-players {
   display: flex;
   flex-direction: column;
@@ -509,14 +530,28 @@ body {
 }
 
 .commentator-bubble {
-  background: rgba(12, 18, 30, 0.82);
+  background: rgba(12, 18, 30, 0.88);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 10px 14px;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.4;
   color: #eaf2ff;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+.live-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #ff3b3b;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  animation: pulse 1.2s infinite;
 }
 
 .commentator-bubble.enter {

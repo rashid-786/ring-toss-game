@@ -34,6 +34,7 @@ export interface StoreState {
   commentary: CommentaryUpdate[];
   recap: CommentaryUpdate | null;
   commentaryEnabled: boolean;
+  commentaryLanguage: string;
 }
 
 const initialState: StoreState = {
@@ -51,6 +52,7 @@ const initialState: StoreState = {
   commentary: [],
   recap: null,
   commentaryEnabled: true,
+  commentaryLanguage: 'English',
 };
 
 let state: StoreState = { ...initialState };
@@ -151,7 +153,7 @@ socket.on(ServerEvents.commentaryUpdate, (update: CommentaryUpdate) => {
 });
 
 socket.on(ServerEvents.commentaryStatus, (status: CommentaryStatus) => {
-  patch({ commentaryEnabled: status.enabled });
+  patch({ commentaryEnabled: status.enabled, commentaryLanguage: status.language ?? 'English' });
 });
 
 socket.on(ServerEvents.finalMatchRecap, (update: CommentaryUpdate) => {

@@ -19,10 +19,22 @@ export default function LobbyScreen({ initialName = '', onStart, onBack }: Props
   const [mode, setMode] = useState<'create' | 'join' | null>(null);
   const [name, setName] = useState(initialName);
   const [code, setCode] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (phase !== 'idle') onStart();
   }, [phase, onStart]);
+
+  const copyRoomCode = async () => {
+    if (!room) return;
+    try {
+      await navigator.clipboard.writeText(room.roomCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable
+    }
+  };
 
   if (room) {
     const waiting = room.players.length < 2;
@@ -33,6 +45,15 @@ export default function LobbyScreen({ initialName = '', onStart, onBack }: Props
           <div className="room-code-box">
             <span className="room-code">{room.roomCode}</span>
             <span className="room-code-label">Room code</span>
+            <button
+              type="button"
+              className="copy-code-btn"
+              onClick={copyRoomCode}
+              title="Copy room code"
+              aria-label="Copy room code"
+            >
+              {copied ? '✓ Copied' : '📋 Copy'}
+            </button>
           </div>
 
           <div className="lobby-players">

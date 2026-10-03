@@ -6,6 +6,7 @@
 export const COMMENTARY_EVENT_TYPES = [
   'MATCH_START',
   'FIRST_SCORE',
+  'SCORE',
   'LEAD_CHANGE',
   'TIE_SCORE',
   'HIGH_VALUE_SCORE',
@@ -41,12 +42,14 @@ export interface CommentaryUpdate {
 export interface CommentaryStatus {
   enabled: boolean;
   reason?: string;
+  language?: string;
 }
 
 /** Priority used by the rate limiter to favor meaningful events. */
 export const COMMENTARY_PRIORITY: Record<CommentaryEventType, number> = {
   MATCH_END: 100,
   FIRST_SCORE: 50,
+  SCORE: 40,
   HIGH_VALUE_SCORE: 60,
   COMBO: 55,
   COMEBACK: 55,

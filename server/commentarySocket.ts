@@ -27,6 +27,7 @@ export function registerCommentarySocketHandlers(
   service: AICommentaryService,
   fallback: FallbackCommentaryProvider,
   minIntervalMs: number,
+  language = 'English',
 ): void {
   io.on('connection', (socket) => {
     const manager = new CommentaryManager({
@@ -41,7 +42,7 @@ export function registerCommentarySocketHandlers(
       },
     });
 
-    socket.emit(CommentarySocketEvents.status, { enabled: service.enabled });
+    socket.emit(CommentarySocketEvents.status, { enabled: service.enabled, language });
 
     socket.on(CommentarySocketEvents.matchStart, (payload) => {
       manager.reset();

@@ -47,6 +47,11 @@ export class CommentaryManager {
 
   private ended = false;
 
+  /** Normalized commentary lines used so far, per player (and a global list). */
+  private recentByPlayer = new Map<string, string[]>();
+
+  private recentGlobal: string[] = [];
+
   constructor(private deps: CommentaryManagerDeps) {
     this.rateLimiter = new CommentaryRateLimiter({
       minIntervalMs: deps.minIntervalMs,
@@ -63,6 +68,8 @@ export class CommentaryManager {
     this.highestValueThrow = 0;
     this.finalTenSent = false;
     this.ended = false;
+    this.recentByPlayer = new Map();
+    this.recentGlobal = [];
   }
 
   isEnabled(): boolean {
@@ -112,6 +119,22 @@ export class CommentaryManager {
     }
   }
 
+  /**
+   * A throw that ends without landing. Announced with a light-hearted line, and
+   * a miss breaks any landing streak (a hit after a miss isn't a combo).
+   */
+  handleMiss(input: { playerId: PlayerId; players: CommentaryPlayerInput[] }): void {
+    if (this.ended) return;
+    this.lastLandedPlayer = null;
+    this.emit(
+      'MISS',
+      this.buildRequest('MISS', input.players, {
+        pointsScored: 0,
+        scorerName: this.displayName(input.players, input.playerId),
+      }),
+    );
+  }
+
   handleFinalTenSeconds(players: CommentaryPlayerInput[]): void {
     if (this.ended || this.finalTenSent) return;
     this.finalTenSent = true;
@@ -153,25 +176,50 @@ export class CommentaryManager {
 
   /** Asynchronous, fire-and-forget so commentary never blocks gameplay. */
   private generateAndBroadcast(request: CommentaryRequest): void {
-    this.deps.service.generate(request)
-      .then((result) => {
-        const safe = this.sanitizeResult(request, result);
-        this.deps.broadcast({
-          type: request.eventType,
-          message: safe.commentary,
-          tone: safe.tone,
-          createdAt: Date.now(),
-        });
-      })
-      .catch(() => {
-        const fallback = this.deps.fallback.generate(request);
-        this.deps.broadcast({
-          type: request.eventType,
-          message: fallback.commentary,
-          tone: fallback.tone,
-          createdAt: Date.now(),
-        });
-      });
+    // Avoid repeating a line already used BY THIS PLAYER, so each player's
+    // attempts each get their own unique commentary.
+    const who = this.playerKey(request);
+    const used = who ? this.recentByPlayer.get(who) ?? [] : this.recentGlobal;
+    const req: CommentaryRequest = {
+      ...request,
+      previousMessages: used.slice(-10),
+    };
+    this.deps.service.generate(req)
+      .then((result) => this.deliver(req, this.sanitizeResult(req, result)))
+      .catch(() => this.deliver(req, this.deps.fallback.generate(req)));
+  }
+
+  private deliver(request: CommentaryRequest, result: CommentaryResult): void {
+    const normalized = this.normalize(result.commentary);
+    const who = this.playerKey(request);
+    if (who) {
+      const used = this.recentByPlayer.get(who) ?? [];
+      used.push(normalized);
+      if (used.length > 12) used.shift();
+      this.recentByPlayer.set(who, used);
+    }
+    this.recentGlobal.push(normalized);
+    if (this.recentGlobal.length > 12) this.recentGlobal.shift();
+
+    this.deps.broadcast({
+      type: request.eventType,
+      message: result.commentary,
+      tone: result.tone,
+      createdAt: Date.now(),
+    });
+  }
+
+  private playerKey(request: CommentaryRequest): string | null {
+    const name = request.scorerName?.trim().toLowerCase();
+    return name ? name : null;
+  }
+
+  private normalize(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N} ]+/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private sanitizeResult(request: CommentaryRequest, result: CommentaryResult): CommentaryResult {

@@ -17,11 +17,15 @@ import { createTextures } from '../assets/textures';
 import { computeLaunch, simulateTrajectory } from '../physics/ballistics';
 import { PLAYER_COLOR_HEX } from '../../utils/constants';
 import {
+  playCheer,
   playCountdownTick,
   playGo,
   playScore,
   playThrow,
   playTurnSwitch,
+  setAmbienceIntense,
+  startAmbience,
+  stopAmbience,
 } from '../../utils/audio';
 import type { PoleType } from '../../../shared/types';
 
@@ -29,6 +33,7 @@ export interface MatchSnapshotLike {
   phase: string;
   countdown: number;
   countdownActive: boolean;
+  tieBreaker?: boolean;
   poles: Array<{ index: number; x: number }>;
   ring: { active: boolean; x: number; y: number; rotation: number; playerId: number | null };
   turn: number | null;
@@ -76,6 +81,8 @@ export class MatchScene extends Phaser.Scene {
 
   private lastPhase = '';
 
+  private lastTieBreaker = false;
+
   private lastTurn: number | null = null;
 
   private homePulse: Phaser.Tweens.Tween | null = null;
@@ -88,6 +95,7 @@ export class MatchScene extends Phaser.Scene {
 
   create(): void {
     createTextures(this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => stopAmbience());
 
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x7ec8e3).setOrigin(0).setDepth(-10);
     this.add
@@ -198,7 +206,12 @@ export class MatchScene extends Phaser.Scene {
   private handleCountdown(snapshot: MatchSnapshotLike): void {
     if (this.lastPhase !== snapshot.phase) {
       this.lastPhase = snapshot.phase;
-      if (snapshot.phase === 'playing') playGo();
+      if (snapshot.phase === 'playing') {
+        playGo();
+        startAmbience();
+      } else if (snapshot.phase === 'ended') {
+        stopAmbience();
+      }
     }
     if (snapshot.countdownActive && snapshot.countdown !== this.lastCountdown) {
       this.lastCountdown = snapshot.countdown;
@@ -208,12 +221,18 @@ export class MatchScene extends Phaser.Scene {
       this.lastTurn = snapshot.turn;
       playTurnSwitch();
     }
+    if (this.lastTieBreaker !== Boolean(snapshot.tieBreaker)) {
+      this.lastTieBreaker = Boolean(snapshot.tieBreaker);
+      setAmbienceIntense(this.lastTieBreaker);
+      if (this.lastTieBreaker) playCheer(1.4);
+    }
   }
 
   private handleLanded(): void {
     const events = this.source.takeLanded();
     events.forEach((e) => {
       playScore(e.points);
+      playCheer(e.points >= 5 ? 1.3 : 1);
       const visual = this.poleVisuals.find((v) => v.type === e.poleType);
       const x = visual ? visual.shaft.x : GAME_WIDTH / 2;
       const y = visual ? visual.shaft.y : 300;

@@ -90,6 +90,7 @@ export function startServer(options: StartOptions = {}) {
       model: env.AI_MODEL,
       baseUrl: env.AI_BASE_URL,
       timeoutMs: env.AI_REQUEST_TIMEOUT_MS,
+      maxTokens: env.AI_MAX_TOKENS,
       language: env.COMMENTARY_LANGUAGE,
     })
     : new FallbackAICommentaryService(fallback);
@@ -144,6 +145,9 @@ export function startServer(options: StartOptions = {}) {
           timeRemainingMs: 0,
           players,
         });
+        break;
+      case 'miss':
+        cm.handleMiss({ playerId: event.playerId, players });
         break;
       case 'end':
         cm.handleMatchEnd(event.result, players);
@@ -337,6 +341,13 @@ export function startServer(options: StartOptions = {}) {
             attemptsPerPlayer: Number(process.env.ATTEMPTS_PER_PLAYER) || ATTEMPTS_PER_PLAYER,
             tieBreakerAttempts: Number(process.env.TIE_BREAKER_ATTEMPTS) || TIE_BREAKER_ATTEMPTS,
             poleSpeed: Number(process.env.POLE_SPEED) || undefined,
+            tieBreakerSpeedStep: Number(process.env.TIE_BREAKER_SPEED_STEP) || undefined,
+            tieBreakerMaxSpeed: Number(process.env.TIE_BREAKER_MAX_SPEED) || undefined,
+            tieBreakerZoneStep: Number(process.env.TIE_BREAKER_ZONE_STEP) || undefined,
+            tieBreakerZoneMin: Number(process.env.TIE_BREAKER_ZONE_MIN) || undefined,
+            finalRoundSpeed: Number(process.env.TIE_BREAKER_FINAL_SPEED) || undefined,
+            finalRoundZone: Number(process.env.TIE_BREAKER_FINAL_ZONE) || undefined,
+            maxTieRounds: Number(process.env.MAX_TIE_ROUNDS) || undefined,
           },
         );
       }

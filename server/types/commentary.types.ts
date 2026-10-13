@@ -14,6 +14,7 @@ export interface CommentaryRequest {
   player2: CommentaryPlayer;
   leaderName?: string;
   scorerName?: string;
+  previousMessages?: string[];
   timeRemaining?: number;
   pointsScored?: number;
   winner?: string;

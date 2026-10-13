@@ -31,7 +31,7 @@ export const LANDING_MIN_VY = 120;
 
 // Poles.
 export const ZONE_HEIGHT = 60;
-export const POLE_PATROL = 30;
+export const POLE_PATROL = 60;
 
 export const POLE_PLACEMENT: { type: PoleType; x: number }[] = [
   { type: 'medium', x: 360 },

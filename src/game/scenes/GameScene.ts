@@ -32,12 +32,15 @@ import { bus } from '../../utils/events';
 import { emitMatchStart, emitLanded, emitMatchEnd } from '../../net/commentary';
 import {
   initAudio,
+  playCheer,
   playCountdownTick,
   playGo,
   playHit,
   playScore,
   playThrow,
   playTurnSwitch,
+  startAmbience,
+  stopAmbience,
 } from '../../utils/audio';
 
 export class GameScene extends Phaser.Scene {
@@ -128,6 +131,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerup', this.onPointerUp, this);
 
     this.startCountdown();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => stopAmbience());
   }
 
   update(_time: number, delta: number): void {
@@ -189,6 +193,7 @@ export class GameScene extends Phaser.Scene {
   private startMatch(): void {
     this.state.phase = 'playing';
     this.turns.reset();
+    startAmbience();
 
     this.ring.setPlayerColor(PLAYER_COLOR_HEX[this.turns.currentPlayer()]);
     this.emitAttempts();
@@ -200,6 +205,7 @@ export class GameScene extends Phaser.Scene {
     if (this.state.phase === 'ended') return;
     this.state.phase = 'ended';
     this.aimGraphics.clear();
+    stopAmbience();
     const result = calculateResult(this.state.scores);
     bus.emit('hud:match-end', { result });
     emitMatchEnd(result);
@@ -316,6 +322,7 @@ export class GameScene extends Phaser.Scene {
     emitLanded(player, points, { ...this.state.scores });
 
     playScore(points);
+    playCheer(points >= 5 ? 1.3 : 1);
     this.spawnBurst(pole.zone.x, pole.zone.y);
     this.spawnFloatingText(pole.zone.x, pole.zone.y - 30, `+${points}`);
     this.spawnLandedRing(pole.zone.x, pole.zone.y, player);

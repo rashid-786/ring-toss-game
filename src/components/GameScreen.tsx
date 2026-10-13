@@ -3,6 +3,7 @@ import { createGame } from '../game/createGame';
 import { bus } from '../utils/events';
 import { setCommentaryPlayers, connectCommentary, disconnectCommentary } from '../net/commentary';
 import CommentatorPanel from './CommentatorPanel';
+import AmbienceToggle from './AmbienceToggle';
 import type { MatchResult, PlayerId } from '../types/game';
 import { PLAYER_CSS_COLORS } from '../utils/constants';
 
@@ -103,6 +104,7 @@ export default function GameScreen({ player1Name, player2Name, onComplete }: Pro
 
       <div className="game-canvas" ref={containerRef} />
 
+      <AmbienceToggle />
       <CommentatorPanel />
 
       <div className="hint">Drag the ring backward and release to throw</div>

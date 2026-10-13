@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   consumeCommentary as consumeBridgeCommentary,
   useCommentary,
@@ -7,10 +7,11 @@ import {
   consumeCommentary as consumeOnlineCommentary,
   useGame,
 } from '../net/gameStore';
+import { speakText } from '../utils/audio';
 import type { CommentaryUpdate, CommentaryTone } from '../../shared/commentary';
 
-const MAX_QUEUE = 3;
-const MESSAGE_MS = 4000;
+const MAX_QUEUE = 4;
+const MESSAGE_MS = 3000;
 
 const TONE_CLASS: Record<CommentaryTone, string> = {
   excited: 'tone-excited',
@@ -48,38 +49,15 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   const language = isOnline ? onlineLanguage : localLanguage;
   const consume = isOnline ? consumeOnlineCommentary : consumeBridgeCommentary;
 
-  const [queue, setQueue] = useState<CommentaryUpdate[]>([]);
+const [queue, setQueue] = useState<CommentaryUpdate[]>([]);
   const [current, setCurrent] = useState<CommentaryUpdate | null>(null);
   const [ttsOn, setTtsOn] = useState(true);
-  const spokenFor = useRef<string | null>(null);
-  const speakTimer = useRef<number | null>(null);
 
   const voiceLang = (value: string): string => {
     const lang = value.toLowerCase();
     if (lang.includes('hind')) return 'hi-IN';
     if (lang.includes('arab')) return 'ar-SA';
     return 'en-US';
-  };
-
-  const speak = (message: string, isWinner: boolean): void => {
-    const synth = window.speechSynthesis;
-    // Cancel any stuck/busy speech so the next message always plays.
-    synth.cancel();
-    // Chrome drops utterances started immediately after cancel(); delay briefly.
-    if (speakTimer.current !== null) window.clearTimeout(speakTimer.current);
-    speakTimer.current = window.setTimeout(() => {
-      const speakable = message
-        .replace(/!{2,}/g, '!')
-        .replace(/!/g, '.')
-        .replace(/\.{3,}/g, '.')
-        .trim();
-      const utterance = new SpeechSynthesisUtterance(speakable);
-      utterance.lang = voiceLang(language);
-      utterance.volume = isWinner ? 1 : 0.9;
-      utterance.rate = isWinner ? 0.95 : 1;
-      utterance.pitch = isWinner ? 1.15 : 1;
-      synth.speak(utterance);
-    }, 120);
   };
 
   useEffect(() => {
@@ -107,24 +85,14 @@ export default function CommentatorPanel({ source = 'local' }: Props) {
   }, [current]);
 
   useEffect(() => {
-    if (!ttsOn || !current || spokenFor.current === current.message) return;
-    spokenFor.current = current.message;
-    speak(current.message, current.type === 'MATCH_END');
+    if (!ttsOn || !current) return;
+    const winner = current.type === 'MATCH_END';
+    speakText(current.message, voiceLang(language), {
+      volume: winner ? 1 : 0.9,
+      rate: winner ? 0.95 : 1,
+      pitch: winner ? 1.15 : 1,
+    });
   }, [current, ttsOn, language]);
-
-  // Chrome pauses speech synthesis after a while / when the tab is backgrounded;
-  // periodically nudge it back to life so commentary keeps speaking.
-  useEffect(() => {
-    if (!ttsOn) return;
-    const id = window.setInterval(() => {
-      const synth = window.speechSynthesis;
-      if (synth.paused) synth.resume();
-    }, 8000);
-    return () => {
-      window.clearInterval(id);
-      if (speakTimer.current !== null) window.clearTimeout(speakTimer.current);
-    };
-  }, [ttsOn]);
 
   if (!enabled) return null;
 

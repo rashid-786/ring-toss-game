@@ -15,6 +15,8 @@ Never recalculate scores or select a different winner.
 
 Keep the wording positive, inclusive, workplace-safe, and entertaining.
 
+Be FUNNY — sprinkle in playful jokes, witty one-liners, light teasing (never mocking), and fun workplace references. Imagine a cheerful office party announcer commentating on a lunch-break ring toss: energetic, silly, and encouraging.
+
 Do not insult, embarrass, rank, or criticize either player.
 
 Do not mention gambling, money, employment performance, intelligence, protected characteristics, or personal information.
@@ -34,9 +36,13 @@ export interface AiMessages {
  * required match information is included.
  */
 export function buildMessages(request: CommentaryRequest, language = 'English'): AiMessages {
+  const avoid = request.previousMessages?.filter((m) => m && m.trim().length > 0).slice(-8) ?? [];
+  const avoidBlock = avoid.length > 0
+    ? `\n\nYou have already used these lines earlier in this match. Do NOT repeat or closely paraphrase any of them — every line must be brand new:\n${avoid.map((m) => `- ${m}`).join('\n')}`
+    : '';
   return {
     system: commentarySystemInstruction(language),
-    user: `${JSON.stringify(request)}\n\nWrite the 'commentary' field in ${language}.`,
+    user: `${JSON.stringify(request)}\n\nWrite the 'commentary' field in ${language}.${avoidBlock}`,
   };
 }
 
@@ -44,4 +50,4 @@ export function buildMessages(request: CommentaryRequest, language = 'English'):
  * Instruction appended to the user message telling the model the exact JSON
  * shape to return, with allowed tone values.
  */
-export const OUTPUT_FORMAT_INSTRUCTION = `\n\nRespond with a single JSON object exactly matching this schema:\n{"eventType":"<one of MATCH_START,FIRST_SCORE,SCORE,LEAD_CHANGE,TIE_SCORE,HIGH_VALUE_SCORE,COMBO,COMEBACK,FINAL_TEN_SECONDS,MATCH_END,PLAYER_DISCONNECTED,PLAYER_RECONNECTED>","commentary":"<one sentence, at most 100 characters>","tone":"<one of excited,dramatic,funny,neutral,celebratory>"}`;
+export const OUTPUT_FORMAT_INSTRUCTION = `\n\nRespond with a single JSON object exactly matching this schema:\n{"eventType":"<one of MATCH_START,FIRST_SCORE,SCORE,MISS,LEAD_CHANGE,TIE_SCORE,HIGH_VALUE_SCORE,COMBO,COMEBACK,FINAL_TEN_SECONDS,MATCH_END,PLAYER_DISCONNECTED,PLAYER_RECONNECTED>","commentary":"<one sentence, at most 100 characters>","tone":"<one of excited,dramatic,funny,neutral,celebratory>"}`;

@@ -23,6 +23,8 @@ export interface AIServiceOptions {
   baseUrl?: string;
   timeoutMs: number;
   language?: string;
+  /** Token budget per reply. Reasoning models need headroom or the JSON is cut off. */
+  maxTokens?: number;
 }
 
 export interface AICommentaryService {
@@ -81,6 +83,7 @@ export class HttpAICommentaryService implements AICommentaryService {
     const { provider, apiKey, model, baseUrl, language } = this.options;
     const messages = buildMessages(request, language ?? 'English');
     const user = `${messages.user}${OUTPUT_FORMAT_INSTRUCTION}`;
+    const maxTokens = this.options.maxTokens ?? 800;
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -95,7 +98,7 @@ export class HttpAICommentaryService implements AICommentaryService {
           headers,
           body: JSON.stringify({
             model: model ?? 'claude-3-5-haiku-latest',
-            max_tokens: 160,
+            max_tokens: maxTokens,
             system: messages.system,
             messages: [{ role: 'user', content: user }],
           }),
@@ -118,7 +121,7 @@ export class HttpAICommentaryService implements AICommentaryService {
         body: JSON.stringify({
           model: model ?? 'gpt-4o-mini',
           temperature: 0.9,
-          max_tokens: 160,
+          max_tokens: maxTokens,
           // Native OpenAI supports JSON mode; compatible gateways may reject it.
           ...(provider === 'openai' ? { response_format: { type: 'json_object' } } : {}),
           messages: [

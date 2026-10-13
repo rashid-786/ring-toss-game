@@ -335,6 +335,38 @@ body {
   text-align: center;
 }
 
+.confetti-rain {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-24px) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(108vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
 .winner-title {
   font-size: 2.2rem;
   font-weight: 900;
@@ -637,6 +669,29 @@ body {
 .tts-toggle.active {
   background: rgba(47, 123, 255, 0.4);
   border-color: #2f7bff;
+}
+
+.ambience-toggle {
+  position: absolute;
+  right: 20px;
+  top: 84px;
+  z-index: 40;
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(12, 18, 30, 0.82);
+  color: #fff;
+  font-size: 1.15rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ambience-toggle.active {
+  background: rgba(105, 240, 174, 0.25);
+  border-color: #69f0ae;
+  box-shadow: 0 0 0 3px rgba(105, 240, 174, 0.25);
 }
 
 /* ---------- Final match recap ---------- */

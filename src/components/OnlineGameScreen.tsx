@@ -5,6 +5,7 @@ import {
   clearGoFlash,
 } from '../net/gameStore';
 import CommentatorPanel from './CommentatorPanel';
+import AmbienceToggle from './AmbienceToggle';
 import type { MatchResult, PlayerId } from '../types/game';
 import { PLAYER_CSS_COLORS } from '../utils/constants';
 
@@ -104,6 +105,7 @@ export default function OnlineGameScreen({ onComplete, onAbort }: Props) {
 
       <div className="game-canvas" ref={containerRef} />
 
+      <AmbienceToggle />
       <CommentatorPanel source="online" />
 
       <div className="hint">

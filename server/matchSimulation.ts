@@ -23,6 +23,7 @@ export type SimEvent =
   | { type: 'go' }
   | { type: 'throw-start'; playerId: PlayerId }
   | { type: 'landed'; playerId: PlayerId; points: number; poleType: PoleType }
+  | { type: 'miss'; playerId: PlayerId }
   | { type: 'turn'; playerId: PlayerId }
   | { type: 'tie-breaker-start'; round: number }
   | { type: 'end'; result: MatchResult };
@@ -31,6 +32,20 @@ export interface SimOptions {
   attemptsPerPlayer?: number;
   tieBreakerAttempts?: number;
   poleSpeed?: number;
+  /** Percent increase (e.g. 140 = 1.4x) of pole patrol speed after each tied sudden-death round. */
+  tieBreakerSpeedStep?: number;
+  /** Cap for patrol speed during sudden death, in px/s. */
+  tieBreakerMaxSpeed?: number;
+  /** Percent of the landing zone kept (e.g. 85 = 0.85x) after each tied sudden-death round. */
+  tieBreakerZoneStep?: number;
+  /** Minimum landing-zone fraction during sudden death (e.g. 50 = 0.5x). */
+  tieBreakerZoneMin?: number;
+  /** Extreme pole speed (px/s) forced on the final sudden-death round. */
+  finalRoundSpeed?: number;
+  /** Extreme landing-zone fraction forced on the final sudden-death round. */
+  finalRoundZone?: number;
+  /** After this many tied sudden-death rounds, the match is forced to a winner. */
+  maxTieRounds?: number;
 }
 
 interface RingSim {
@@ -100,9 +115,32 @@ export class MatchSimulation {
 
   private tieBreakerAttempts: number;
 
+  private tieBreakerSpeedStep: number;
+
+  private tieBreakerMaxSpeed: number;
+
+  private tieBreakerZoneStep: number;
+
+  private tieBreakerZoneMin: number;
+
+  private finalRoundSpeed: number;
+
+  private finalRoundZone: number;
+
+  private maxTieRounds: number;
+
+  private tieBreakerZoneFactor = 1;
+
   constructor(private emit: (event: SimEvent) => void, options: SimOptions = {}) {
     this.attemptsPerPlayer = options.attemptsPerPlayer ?? 5;
     this.tieBreakerAttempts = options.tieBreakerAttempts ?? 1;
+    this.tieBreakerSpeedStep = (options.tieBreakerSpeedStep ?? 175) / 100;
+    this.tieBreakerMaxSpeed = options.tieBreakerMaxSpeed ?? 240;
+    this.tieBreakerZoneStep = (options.tieBreakerZoneStep ?? 85) / 100;
+    this.tieBreakerZoneMin = (options.tieBreakerZoneMin ?? 50) / 100;
+    this.finalRoundSpeed = options.finalRoundSpeed ?? 430;
+    this.finalRoundZone = (options.finalRoundZone ?? 30) / 100;
+    this.maxTieRounds = options.maxTieRounds ?? 4;
     this.poleSpeed = options.poleSpeed;
     this.initPoles();
   }
@@ -145,6 +183,7 @@ export class MatchSimulation {
     this.turnSwitchAt = null;
     this.nowMs = 0;
     this.ended = false;
+    this.tieBreakerZoneFactor = 1;
     this.initPoles();
   }
 
@@ -249,7 +288,8 @@ export class MatchSimulation {
         const type = POLE_PLACEMENT[pole.index].type;
         const cfg = POLE_CONFIGS[type];
         const zoneY = this.groundTop - cfg.height - ZONE_HEIGHT / 2;
-        const withinX = Math.abs(this.ring.x - pole.x) <= cfg.landingZoneWidth / 2 + RING_RADIUS;
+        const zoneW = cfg.landingZoneWidth * this.tieBreakerZoneFactor;
+        const withinX = Math.abs(this.ring.x - pole.x) <= zoneW / 2 + RING_RADIUS;
         const withinY = Math.abs(this.ring.y - zoneY) <= ZONE_HEIGHT / 2 + RING_RADIUS;
         if (withinX && withinY) {
           this.handleLanding(type, cfg.points);
@@ -286,6 +326,8 @@ export class MatchSimulation {
   }
 
   private endThrow(): void {
+    if (!this.ring.active) return;
+    this.emit({ type: 'miss', playerId: this.turn });
     this.ring.active = false;
     this.advanceAfterThrow();
   }
@@ -312,6 +354,15 @@ export class MatchSimulation {
         return;
       }
       this.tieBreakerRound += 1;
+      if (this.tieBreakerRound > this.maxTieRounds) {
+        // Still level after max rounds — force a sudden-death call so the
+        // match can't go on forever.
+        this.finishMatch(this.fallbackChampion());
+        return;
+      }
+      // Each tied round makes the pole patrol faster -> landing gets harder,
+      // so ties become rarer and the match resolves sooner.
+      this.raiseTieBreakDifficulty();
       this.emit({ type: 'tie-breaker-start', round: this.tieBreakerRound });
     }
 
@@ -330,23 +381,50 @@ export class MatchSimulation {
   private startTieBreaker(): void {
     this.tieBreaker = true;
     this.tieBreakerRound = 1;
+    this.raiseTieBreakDifficulty();
     this.emit({ type: 'tie-breaker-start', round: 1 });
     this.turnSwitchAt = this.nowMs + END_THROW_DELAY_MS;
   }
 
-  private finishMatch(): void {
+  /**
+   * Makes sudden death harder: the pole patrols faster AND its landing zone
+   * narrows. Applied when sudden death starts and again after every tied round,
+   * so round 1 is already tougher than regulation. The final round (the last one
+   * before a forced winner) spikes to an extreme level.
+   */
+  private raiseTieBreakDifficulty(): void {
+    const isFinalRound = this.tieBreakerRound >= this.maxTieRounds;
+    for (const p of this.patrol) {
+      p.speed = isFinalRound
+        ? Math.max(p.speed * this.tieBreakerSpeedStep, this.finalRoundSpeed)
+        : Math.min(p.speed * this.tieBreakerSpeedStep, this.tieBreakerMaxSpeed);
+    }
+    this.tieBreakerZoneFactor = isFinalRound
+      ? Math.min(this.tieBreakerZoneFactor * this.tieBreakerZoneStep, this.finalRoundZone)
+      : Math.max(this.tieBreakerZoneFactor * this.tieBreakerZoneStep, this.tieBreakerZoneMin);
+  }
+
+  /** Champion for a forced sudden-death call: the current leader, else player 1. */
+  private fallbackChampion(): PlayerId {
+    if (this.scores[1] !== this.scores[2]) return this.scores[1] > this.scores[2] ? 1 : 2;
+    return 1;
+  }
+
+  private finishMatch(forcedWinner?: PlayerId): void {
     this.phase = 'ended';
     this.ended = true;
     this.ring.active = false;
-    this.emit({ type: 'end', result: this.result() });
+    this.emit({ type: 'end', result: this.result(forcedWinner) });
   }
 
-  result(): MatchResult {
+  result(forcedWinner?: PlayerId): MatchResult {
     const player1Score = this.scores[1];
     const player2Score = this.scores[2];
-    let winner: PlayerId | null = null;
-    if (player1Score > player2Score) winner = 1;
-    else if (player2Score > player1Score) winner = 2;
+    let winner: PlayerId | null = forcedWinner ?? null;
+    if (winner === null) {
+      if (player1Score > player2Score) winner = 1;
+      else if (player2Score > player1Score) winner = 2;
+    }
     return { player1Score, player2Score, winner };
   }
 

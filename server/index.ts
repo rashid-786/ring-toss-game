@@ -342,6 +342,8 @@ export function startServer(options: StartOptions = {}) {
             tieBreakerAttempts: Number(process.env.TIE_BREAKER_ATTEMPTS) || TIE_BREAKER_ATTEMPTS,
             poleSpeed: Number(process.env.POLE_SPEED) || undefined,
             tieBreakerSpeedStep: Number(process.env.TIE_BREAKER_SPEED_STEP) || undefined,
+            tieBreakerStartSpeed: Number(process.env.TIE_BREAKER_START_SPEED) || undefined,
+            tieBreakerStartZone: Number(process.env.TIE_BREAKER_START_ZONE) || undefined,
             tieBreakerMaxSpeed: Number(process.env.TIE_BREAKER_MAX_SPEED) || undefined,
             tieBreakerZoneStep: Number(process.env.TIE_BREAKER_ZONE_STEP) || undefined,
             tieBreakerZoneMin: Number(process.env.TIE_BREAKER_ZONE_MIN) || undefined,

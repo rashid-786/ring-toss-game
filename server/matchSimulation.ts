@@ -32,6 +32,10 @@ export interface SimOptions {
   attemptsPerPlayer?: number;
   tieBreakerAttempts?: number;
   poleSpeed?: number;
+  /** Pole patrol speed (px/s) at the START of sudden death (round 1). */
+  tieBreakerStartSpeed?: number;
+  /** Landing-zone fraction at the START of sudden death (e.g. 75 = 0.75x). */
+  tieBreakerStartZone?: number;
   /** Percent increase (e.g. 140 = 1.4x) of pole patrol speed after each tied sudden-death round. */
   tieBreakerSpeedStep?: number;
   /** Cap for patrol speed during sudden death, in px/s. */
@@ -117,6 +121,10 @@ export class MatchSimulation {
 
   private tieBreakerSpeedStep: number;
 
+  private tieBreakerStartSpeed: number;
+
+  private tieBreakerStartZone: number;
+
   private tieBreakerMaxSpeed: number;
 
   private tieBreakerZoneStep: number;
@@ -135,6 +143,8 @@ export class MatchSimulation {
     this.attemptsPerPlayer = options.attemptsPerPlayer ?? 5;
     this.tieBreakerAttempts = options.tieBreakerAttempts ?? 1;
     this.tieBreakerSpeedStep = (options.tieBreakerSpeedStep ?? 175) / 100;
+    this.tieBreakerStartSpeed = options.tieBreakerStartSpeed ?? 70;
+    this.tieBreakerStartZone = (options.tieBreakerStartZone ?? 75) / 100;
     this.tieBreakerMaxSpeed = options.tieBreakerMaxSpeed ?? 240;
     this.tieBreakerZoneStep = (options.tieBreakerZoneStep ?? 85) / 100;
     this.tieBreakerZoneMin = (options.tieBreakerZoneMin ?? 50) / 100;
@@ -381,27 +391,46 @@ export class MatchSimulation {
   private startTieBreaker(): void {
     this.tieBreaker = true;
     this.tieBreakerRound = 1;
-    this.raiseTieBreakDifficulty();
+    if (this.tieBreakerRound >= this.maxTieRounds) {
+      this.applyFinalRound();
+    } else {
+      for (const p of this.patrol) {
+        p.speed = Math.max(p.speed, this.tieBreakerStartSpeed);
+      }
+      this.tieBreakerZoneFactor = Math.min(this.tieBreakerZoneFactor, this.tieBreakerStartZone);
+    }
     this.emit({ type: 'tie-breaker-start', round: 1 });
     this.turnSwitchAt = this.nowMs + END_THROW_DELAY_MS;
   }
 
   /**
-   * Makes sudden death harder: the pole patrols faster AND its landing zone
-   * narrows. Applied when sudden death starts and again after every tied round,
-   * so round 1 is already tougher than regulation. The final round (the last one
-   * before a forced winner) spikes to an extreme level.
+   * Makes sudden death progressively harder each tied round: the pole patrols
+   * faster AND its landing zone narrows (starting already tougher than
+   * regulation). The final round before a forced winner spikes to an extreme.
    */
   private raiseTieBreakDifficulty(): void {
-    const isFinalRound = this.tieBreakerRound >= this.maxTieRounds;
-    for (const p of this.patrol) {
-      p.speed = isFinalRound
-        ? Math.max(p.speed * this.tieBreakerSpeedStep, this.finalRoundSpeed)
-        : Math.min(p.speed * this.tieBreakerSpeedStep, this.tieBreakerMaxSpeed);
+    if (this.tieBreakerRound >= this.maxTieRounds) {
+      this.applyFinalRound();
+      return;
     }
-    this.tieBreakerZoneFactor = isFinalRound
-      ? Math.min(this.tieBreakerZoneFactor * this.tieBreakerZoneStep, this.finalRoundZone)
-      : Math.max(this.tieBreakerZoneFactor * this.tieBreakerZoneStep, this.tieBreakerZoneMin);
+    for (const p of this.patrol) {
+      p.speed = Math.min(p.speed * this.tieBreakerSpeedStep, this.tieBreakerMaxSpeed);
+    }
+    this.tieBreakerZoneFactor = Math.max(
+      this.tieBreakerZoneFactor * this.tieBreakerZoneStep,
+      this.tieBreakerZoneMin,
+    );
+  }
+
+  /** Extreme difficulty for the last sudden-death round. */
+  private applyFinalRound(): void {
+    for (const p of this.patrol) {
+      p.speed = Math.max(p.speed * this.tieBreakerSpeedStep, this.finalRoundSpeed);
+    }
+    this.tieBreakerZoneFactor = Math.min(
+      this.tieBreakerZoneFactor * this.tieBreakerZoneStep,
+      this.finalRoundZone,
+    );
   }
 
   /** Champion for a forced sudden-death call: the current leader, else player 1. */

@@ -48,7 +48,7 @@ export interface SimOptions {
   finalRoundSpeed?: number;
   /** Extreme landing-zone fraction forced on the final sudden-death round. */
   finalRoundZone?: number;
-  /** After this many tied sudden-death rounds, the match is forced to a winner. */
+  /** Sudden-death round at which difficulty maxes out; play continues until a winner. */
   maxTieRounds?: number;
 }
 
@@ -364,14 +364,9 @@ export class MatchSimulation {
         return;
       }
       this.tieBreakerRound += 1;
-      if (this.tieBreakerRound > this.maxTieRounds) {
-        // Still level after max rounds — force a sudden-death call so the
-        // match can't go on forever.
-        this.finishMatch(this.fallbackChampion());
-        return;
-      }
-      // Each tied round makes the pole patrol faster -> landing gets harder,
-      // so ties become rarer and the match resolves sooner.
+      // Still level after a sudden-death round: keep playing round after round
+      // until the scores differ. Difficulty ramps up (and then holds at its
+      // maximum) so an eventual winner is found without ever forcing one.
       this.raiseTieBreakDifficulty();
       this.emit({ type: 'tie-breaker-start', round: this.tieBreakerRound });
     }
@@ -406,7 +401,7 @@ export class MatchSimulation {
   /**
    * Makes sudden death progressively harder each tied round: the pole patrols
    * faster AND its landing zone narrows (starting already tougher than
-   * regulation). The final round before a forced winner spikes to an extreme.
+   * regulation). Once maxTieRounds is reached it holds at an extreme level.
    */
   private raiseTieBreakDifficulty(): void {
     if (this.tieBreakerRound >= this.maxTieRounds) {
@@ -422,38 +417,31 @@ export class MatchSimulation {
     );
   }
 
-  /** Extreme difficulty for the last sudden-death round. */
+  /**
+   * Extreme but stable difficulty for deep sudden-death rounds. Sets fixed
+   * values (instead of compounding) so the difficulty holds at this level for
+   * as long as it takes to produce a winner.
+   */
   private applyFinalRound(): void {
     for (const p of this.patrol) {
-      p.speed = Math.max(p.speed * this.tieBreakerSpeedStep, this.finalRoundSpeed);
+      p.speed = this.finalRoundSpeed;
     }
-    this.tieBreakerZoneFactor = Math.min(
-      this.tieBreakerZoneFactor * this.tieBreakerZoneStep,
-      this.finalRoundZone,
-    );
+    this.tieBreakerZoneFactor = this.finalRoundZone;
   }
 
-  /** Champion for a forced sudden-death call: the current leader, else player 1. */
-  private fallbackChampion(): PlayerId {
-    if (this.scores[1] !== this.scores[2]) return this.scores[1] > this.scores[2] ? 1 : 2;
-    return 1;
-  }
-
-  private finishMatch(forcedWinner?: PlayerId): void {
+  private finishMatch(): void {
     this.phase = 'ended';
     this.ended = true;
     this.ring.active = false;
-    this.emit({ type: 'end', result: this.result(forcedWinner) });
+    this.emit({ type: 'end', result: this.result() });
   }
 
-  result(forcedWinner?: PlayerId): MatchResult {
+  result(): MatchResult {
     const player1Score = this.scores[1];
     const player2Score = this.scores[2];
-    let winner: PlayerId | null = forcedWinner ?? null;
-    if (winner === null) {
-      if (player1Score > player2Score) winner = 1;
-      else if (player2Score > player1Score) winner = 2;
-    }
+    let winner: PlayerId | null = null;
+    if (player1Score > player2Score) winner = 1;
+    else if (player2Score > player1Score) winner = 2;
     return { player1Score, player2Score, winner };
   }
 

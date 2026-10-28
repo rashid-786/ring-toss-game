@@ -159,8 +159,19 @@ export function startServer(options: StartOptions = {}) {
 
   function attachTick(room: Room): void {
     if (room.tickInterval) return;
+    let lastTickAt = performance.now();
     room.tickInterval = setInterval(() => {
-      room.sim.tick(TICK_MS);
+      // Advance by the real elapsed time instead of a fixed step. In hosted
+      // environments timers can fire late (CPU throttling, event-loop load),
+      // and a fixed step makes the whole simulation run in slow motion.
+      const now = performance.now();
+      let elapsed = Math.min(now - lastTickAt, 1000);
+      lastTickAt = now;
+      while (elapsed > 0) {
+        const step = Math.min(elapsed, TICK_MS);
+        room.sim.tick(step);
+        elapsed -= step;
+      }
 
       const events = room.events.splice(0, room.events.length);
       events.forEach((event) => {

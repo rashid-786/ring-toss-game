@@ -460,6 +460,8 @@ export class MatchSimulation {
         y: this.ring.y,
         rotation: this.ring.rotation,
         playerId: null,
+        vx: this.ring.vx,
+        vy: this.ring.vy,
       },
       attempts: { ...this.attempts },
       tieBreaker: this.tieBreaker,

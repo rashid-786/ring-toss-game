@@ -8,6 +8,7 @@ import {
   POLE_PLACEMENT,
   RING_HOME_X,
   RING_HOME_Y,
+  RING_RADIUS,
   MAX_DRAG,
   MIN_THROW_VELOCITY,
   MAX_THROW_VELOCITY,
@@ -35,7 +36,15 @@ export interface MatchSnapshotLike {
   countdownActive: boolean;
   tieBreaker?: boolean;
   poles: Array<{ index: number; x: number }>;
-  ring: { active: boolean; x: number; y: number; rotation: number; playerId: number | null };
+  ring: {
+    active: boolean;
+    x: number;
+    y: number;
+    rotation: number;
+    playerId: number | null;
+    vx?: number;
+    vy?: number;
+  };
   turn: number | null;
 }
 
@@ -86,6 +95,17 @@ export class MatchScene extends Phaser.Scene {
   private lastTurn: number | null = null;
 
   private homePulse: Phaser.Tweens.Tween | null = null;
+
+  private lastRingSnapshot: MatchSnapshotLike['ring'] | null = null;
+
+  private ringAnchor: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    rotation: number;
+    at: number;
+  } | null = null;
 
   private groundTop = GAME_HEIGHT - GROUND_HEIGHT;
 
@@ -164,15 +184,52 @@ export class MatchScene extends Phaser.Scene {
   }
 
   private reconcileRing(snapshot: MatchSnapshotLike, dt: number): void {
-    const factor = Math.min(1, dt * 0.03);
+    const ring = snapshot.ring;
 
-    if (snapshot.ring.active) {
+    if (this.lastRingSnapshot !== ring) {
+      this.lastRingSnapshot = ring;
+      this.ringAnchor = ring.active && typeof ring.vx === 'number' && typeof ring.vy === 'number'
+        ? {
+          x: ring.x,
+          y: ring.y,
+          vx: ring.vx,
+          vy: ring.vy,
+          rotation: ring.rotation,
+          at: performance.now(),
+        }
+        : null;
+    }
+
+    if (ring.active) {
       const colorId = this.source.getTurnColorId() ?? 1;
+      this.stopHomePulse();
       this.ringSprite.setVisible(true);
       this.ringSprite.setTint(PLAYER_COLOR_HEX[colorId]);
-      this.ringSprite.x += (snapshot.ring.x - this.ringSprite.x) * factor;
-      this.ringSprite.y += (snapshot.ring.y - this.ringSprite.y) * factor;
-      this.ringSprite.rotation += (snapshot.ring.rotation - this.ringSprite.rotation) * factor;
+
+      if (this.ringAnchor) {
+        // Extrapolate between the ~30 Hz snapshots using the server's velocity.
+        // Without this the sprite has to "glide" towards each new position,
+        // which looks like the ring slows down right before the pole — very
+        // noticeable once real network latency is involved (production).
+        const elapsed = Math.min(
+          Math.max((performance.now() - this.ringAnchor.at) / 1000, 0),
+          0.3,
+        );
+        const a = this.ringAnchor;
+        this.ringSprite.setPosition(
+          a.x + a.vx * elapsed,
+          Math.min(
+            a.y + a.vy * elapsed + 0.5 * GRAVITY_Y * elapsed * elapsed,
+            this.groundTop - RING_RADIUS,
+          ),
+        );
+        this.ringSprite.setRotation(a.rotation + (a.vx / 320) * elapsed);
+      } else {
+        const factor = Math.min(1, dt * 0.03);
+        this.ringSprite.x += (ring.x - this.ringSprite.x) * factor;
+        this.ringSprite.y += (ring.y - this.ringSprite.y) * factor;
+        this.ringSprite.rotation += (ring.rotation - this.ringSprite.rotation) * factor;
+      }
       return;
     }
 
@@ -194,13 +251,16 @@ export class MatchScene extends Phaser.Scene {
         });
       }
     } else {
-      if (this.homePulse) {
-        this.homePulse.stop();
-        this.homePulse = null;
-        this.ringSprite.setScale(1);
-      }
+      this.stopHomePulse();
       this.ringSprite.setVisible(false);
     }
+  }
+
+  private stopHomePulse(): void {
+    if (!this.homePulse) return;
+    this.homePulse.stop();
+    this.homePulse = null;
+    this.ringSprite.setScale(1);
   }
 
   private handleCountdown(snapshot: MatchSnapshotLike): void {

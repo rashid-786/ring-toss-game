@@ -24,6 +24,9 @@ export interface RingSnapshot {
   y: number;
   rotation: number;
   playerId: PlayerId | null;
+  /** Current velocity, used by clients to extrapolate motion between snapshots. */
+  vx?: number;
+  vy?: number;
 }
 
 export interface ServerSnapshot {
